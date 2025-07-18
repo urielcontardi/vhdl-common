@@ -22,12 +22,12 @@ Entity LinearSolver_Handler is
         sysclk          : in std_logic;
         start_i         : in std_logic;
 
-        Amatrix         : in matrix_fp_t(0 to N_SS - 1, 0 to N_SS - 1);
+        Amatrix_i       : in matrix_fp_t(0 to N_SS - 1, 0 to N_SS - 1);
         Xvec_i          : in vector_fp_t(0 to N_SS - 1);
-        Bmatrix         : in matrix_fp_t(0 to N_SS - 1, 0 to N_IN - 1);
+        Bmatrix_i       : in matrix_fp_t(0 to N_SS - 1, 0 to N_IN - 1);
         Uvec_i          : in vector_fp_t(0 to N_IN - 1);
 
-        stateVector_o   : out vector_fp_t(0 to N_SS - 1);
+        Xvec_next_o     : out vector_fp_t(0 to N_SS - 1);
         busy_o          : out std_logic
     );
 End entity;
@@ -46,13 +46,13 @@ Architecture arch of LinearSolver_Handler is
             signal A_row : vector_fp_t(0 to N_SS - 1);
             signal B_row : vector_fp_t(0 to N_IN - 1);
         begin 
-            Row_Extract_Process: process(Amatrix, Bmatrix)
+            Row_Extract_Process: process(Amatrix_i, Bmatrix_i)
             begin
                 for j in 0 to N_SS-1 loop
-                    A_row(j) <= Amatrix(index, j);
+                    A_row(j) <= Amatrix_i(index, j);
                 end loop;
                 for j in 0 to N_IN-1 loop
-                    B_row(j) <= Bmatrix(index, j);
+                    B_row(j) <= Bmatrix_i(index, j);
                 end loop;
             end process;
 
@@ -70,7 +70,7 @@ Architecture arch of LinearSolver_Handler is
                 Bvec_i          => B_row,
                 Uvec_i          => Uvec_i,
 
-                stateResult_o   => stateVector_o(index),
+                stateResult_o   => Xvec_next_o(index),
                 busy_o          => busy_vec(index)
             );
         End generate;
