@@ -100,11 +100,11 @@ begin
     Port map(
         sysclk          => sysclk_tb,       
         start_i         => start_i_tb,      
-        Amatrix         => Amatrix_i_tb,    
+        Amatrix_i       => Amatrix_i_tb,    
         Xvec_i          => Xvec_i_tb,    
-        Bmatrix         => Bmatrix_i_tb,    
+        Bmatrix_i       => Bmatrix_i_tb,    
         Uvec_i          => Uvec_i_tb,    
-        stateVector_o   => stateResult_o_tb,
+        Xvec_next_o     => stateResult_o_tb,
         busy_o          => busy_o_tb       
     );
 
