@@ -42,7 +42,7 @@ Entity LinearSolver_Unit is
     );
     Port (
         sysclk          : in std_logic;
-        start_i          : in std_logic;
+        start_i         : in std_logic;
 
         Avec_i          : in vector_fp_t(0 to N_SS - 1);
         Xvec_i          : in vector_fp_t(0 to N_SS - 1);
@@ -63,17 +63,16 @@ Architecture rtl of LinearSolver_Unit is
     constant MULTIPLIER_DELAY   : integer := 11;
 
     -- Handle Input to do logi
-    signal operand_1_vec              : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
-    signal operand_2_vec              : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
+    signal operand_1_vec        : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
+    signal operand_2_vec        : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
 
     -- Sequencer
     signal index                : integer range 0 to TOTAL_OPERATIONS;
-    signal data_valid           : std_logic := '0';
-    signal operation_active     : std_logic := '0';  -- Nova flag para controlar operação
+    signal data_valid           : std_logic := '0';  
 
     -- Multiplier Signals
     signal pipeline_mult        : std_logic_vector(MULTIPLIER_DELAY - 1 downto 0) := (others => '0');
-    signal operand_1, operand_2   : fixed_point_data_t;
+    signal operand_1, operand_2 : fixed_point_data_t;
     signal product              : std_logic_vector((FP_TOTAL_BITS*2)-1 downto 0);
     
     -- Accumulator
@@ -96,7 +95,7 @@ Begin
     --------------------------------------------------------------------------
     -- Assign Output
     --------------------------------------------------------------------------
-    busy_o      <= '1' when pipeline_mult /= (pipeline_mult'range => '0') else '0';
+    busy_o      <= '1' when pipeline_mult /= (pipeline_mult'range => '0') or start_i = '1' else '0';
     stateResult_o <= acmtr(FP_TOTAL_BITS + N_BITS - 1 downto N_BITS);
 
     --------------------------------------------------------------------------
@@ -128,19 +127,14 @@ Begin
     --------------------------------------------------------------------------
     process(sysclk)
     begin
-        if rising_edge(sysclk) then
-
-            data_valid <= '0';
-                
+        if rising_edge(sysclk) then                
             if start_i = '1' then
                 index <= 0;
                 data_valid <= '1';
-                operation_active <= '1';
-            elsif operation_active = '1' and index < TOTAL_OPERATIONS - 1 then
+            elsif data_valid = '1' and index < TOTAL_OPERATIONS - 1 then
                 index <= index + 1;
-                data_valid <= '1';
             else
-                operation_active <= '0';
+                data_valid <= '0';
             end if;
 
             -- Pipeline Multiplier
