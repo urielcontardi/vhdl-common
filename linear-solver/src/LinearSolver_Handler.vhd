@@ -1,3 +1,26 @@
+--! \file		LinearSolver_Handler.vhd
+--!
+--! \brief		
+--!
+--! \author		Vinícius de Carvalho Monteiro Longo (longo@weg.net)
+--! \date       22-07-2025
+--!
+--! \version    1.0
+--!
+--! \copyright	Copyright (c) 2024 WEG - All Rights reserved.
+--!
+--! \note		Target devices : No specific target
+--! \note		Tool versions  : No specific tool
+--! \note		Dependencies   : No specific dependencies
+--!
+--! \ingroup	None
+--! \warning	None
+--!
+--! \note		Revisions:
+--!				- 1.0	22-07-2025	<longo@weg.net>
+--!				First revision.
+
+
 --------------------------------------------------------------------------
 -- Default libraries
 --------------------------------------------------------------------------
@@ -21,12 +44,12 @@ Entity LinearSolver_Handler is
     Port (
         sysclk              : in std_logic;
         start_i             : in std_logic;
-            
+
         Amatrix_i           : in matrix_fp_t(0 to N_SS - 1, 0 to N_SS - 1);
         Xvec_i              : in vector_fp_t(0 to N_SS - 1);
         Bmatrix_i           : in matrix_fp_t(0 to N_SS - 1, 0 to N_IN - 1);
         Uvec_i              : in vector_fp_t(0 to N_IN - 1);
-    
+
         stateResultVec_o    : out vector_fp_t(0 to N_SS - 1);
         busy_o              : out std_logic
     );
