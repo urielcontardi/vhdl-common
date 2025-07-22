@@ -47,6 +47,7 @@ architecture sim of LinearSolver_Unit_tb is
     constant N_SS_TB        : natural := 5;
     constant N_IN_TB        : natural := 2;
     constant CLK_PERIOD     : time    := 10 ns; -- Clock de 100 MHz
+    constant MINIMUM_CYCLES : integer := 20;
 
     --------------------------------------------------------------------------
     -- Factors
@@ -76,7 +77,7 @@ begin
     --------------------------------------------------------------------------
     -- Unit Under Test
     --------------------------------------------------------------------------
-    uut: Entity work.LinearSolver
+    uut: Entity work.LinearSolver_Unit
         generic map (
             N_SS => N_SS_TB,
             N_IN => N_IN_TB
@@ -111,18 +112,19 @@ begin
     stimulus_process: process
 
     begin
+        wait until rising_edge(sysclk_tb);
         start_i_tb <= '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         start_i_tb <= '1'; 
         wait for CLK_PERIOD;
         start_i_tb <= '0';
         wait until busy_o_tb = '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         start_i_tb <= '1';
         wait for CLK_PERIOD;
         start_i_tb <= '0';
         wait until busy_o_tb = '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         finish;
     end process;
 

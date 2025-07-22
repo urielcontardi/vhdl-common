@@ -47,16 +47,17 @@ architecture sim of LinearSolver_Handler_tb is
     constant N_SS_TB        : natural := 5;
     constant N_IN_TB        : natural := 2;
     constant CLK_PERIOD     : time    := 10 ns; -- Clock de 100 MHz
+    constant MINIMUM_CYCLES : integer := 20;
 
     --------------------------------------------------------------------------
     -- Factors
     --------------------------------------------------------------------------
     constant AMATRIX : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_SS_TB - 1) := (
         (x"000100000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
-        (x"000200000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
-        (x"000300000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
-        (x"000400000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
-        (x"000500000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000")
+        (x"000100000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
+        (x"000100000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
+        (x"000100000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000"),
+        (x"000100000000", x"000100000000", x"000100000000", x"000100000000", x"000100000000")
     );
     
     constant BMATRIX : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_IN_TB - 1) := (
@@ -84,7 +85,7 @@ architecture sim of LinearSolver_Handler_tb is
     signal Xvec_i_tb            : vector_fp_t(0 to N_SS_TB - 1) := XVECTOR;
     signal Bmatrix_i_tb         : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_IN_TB - 1) := BMATRIX;
     signal Uvec_i_tb            : vector_fp_t(0 to N_IN_TB - 1) := UVECTOR;
-    signal stateResult_o_tb     : vector_fp_t(0 to N_SS_TB - 1);
+    signal stateResultVec_o_tb  : vector_fp_t(0 to N_SS_TB - 1);
     signal busy_o_tb            : std_logic;
 
 begin
@@ -94,18 +95,18 @@ begin
     --------------------------------------------------------------------------
     LSH: Entity work.LinearSolver_Handler
     generic map (
-        N_SS            => N_SS_TB,
-        N_IN            => N_IN_TB
+        N_SS                => N_SS_TB,
+        N_IN                => N_IN_TB
     )
     Port map(
-        sysclk          => sysclk_tb,       
-        start_i         => start_i_tb,      
-        Amatrix_i       => Amatrix_i_tb,    
-        Xvec_i          => Xvec_i_tb,    
-        Bmatrix_i       => Bmatrix_i_tb,    
-        Uvec_i          => Uvec_i_tb,    
-        Xvec_next_o     => stateResult_o_tb,
-        busy_o          => busy_o_tb       
+        sysclk              => sysclk_tb,       
+        start_i             => start_i_tb,      
+        Amatrix_i           => Amatrix_i_tb,    
+        Xvec_i              => Xvec_i_tb,    
+        Bmatrix_i           => Bmatrix_i_tb,    
+        Uvec_i              => Uvec_i_tb,    
+        stateResultVec_o    => stateResultVec_o_tb,
+        busy_o              => busy_o_tb       
     );
 
 
@@ -121,26 +122,26 @@ begin
     end process;
 
 
-    --------------------------------------------------------------------------
-    -- Stimulus
-    --------------------------------------------------------------------------
+--------------------------------------------------------------------------
+-- Stimulus
+--------------------------------------------------------------------------
     stimulus_process: process
 
     begin
+        wait until rising_edge(sysclk_tb);
         start_i_tb <= '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         start_i_tb <= '1'; 
         wait for CLK_PERIOD;
         start_i_tb <= '0';
         wait until busy_o_tb = '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         start_i_tb <= '1';
         wait for CLK_PERIOD;
         start_i_tb <= '0';
         wait until busy_o_tb = '0';
-        wait for 10 * CLK_PERIOD;
+        wait for MINIMUM_CYCLES * CLK_PERIOD;
         finish;
     end process;
-
 
 end architecture sim;
