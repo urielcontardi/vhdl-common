@@ -19,16 +19,16 @@ Entity LinearSolver_Handler is
         N_IN    : natural := 2     -- Inputs number of State Space
     );
     Port (
-        sysclk          : in std_logic;
-        start_i         : in std_logic;
-
-        Amatrix_i       : in matrix_fp_t(0 to N_SS - 1, 0 to N_SS - 1);
-        Xvec_i          : in vector_fp_t(0 to N_SS - 1);
-        Bmatrix_i       : in matrix_fp_t(0 to N_SS - 1, 0 to N_IN - 1);
-        Uvec_i          : in vector_fp_t(0 to N_IN - 1);
-
-        Xvec_next_o     : out vector_fp_t(0 to N_SS - 1);
-        busy_o          : out std_logic
+        sysclk              : in std_logic;
+        start_i             : in std_logic;
+            
+        Amatrix_i           : in matrix_fp_t(0 to N_SS - 1, 0 to N_SS - 1);
+        Xvec_i              : in vector_fp_t(0 to N_SS - 1);
+        Bmatrix_i           : in matrix_fp_t(0 to N_SS - 1, 0 to N_IN - 1);
+        Uvec_i              : in vector_fp_t(0 to N_IN - 1);
+    
+        stateResultVec_o    : out vector_fp_t(0 to N_SS - 1);
+        busy_o              : out std_logic
     );
 End entity;
 
@@ -70,7 +70,7 @@ Architecture arch of LinearSolver_Handler is
                 Bvec_i          => B_row,
                 Uvec_i          => Uvec_i,
 
-                stateResult_o   => Xvec_next_o(index),
+                stateResult_o   => stateResultVec_o(index),
                 busy_o          => busy_vec(index)
             );
         End generate;
