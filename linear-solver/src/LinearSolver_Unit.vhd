@@ -60,7 +60,7 @@ End entity;
 Architecture rtl of LinearSolver_Unit is
     
     constant TOTAL_OPERATIONS   : integer := N_SS+N_IN;
-    constant MULTIPLIER_DELAY   : integer := 11;
+    constant MULTIPLIER_DELAY   : integer := 7;
 
     -- Handle Input to do logi
     signal operand_1_vec        : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
