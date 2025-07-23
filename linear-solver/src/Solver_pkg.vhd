@@ -40,8 +40,8 @@ Package Solver_pkg is
     --------------------------------------------------------------------------
     -- Constants
     --------------------------------------------------------------------------
-    constant FP_INTEGER_BITS         : natural := 16;     
-    constant FP_FRACTION_BITS         : natural := 32;     
+    constant FP_INTEGER_BITS         : natural := 14;     
+    constant FP_FRACTION_BITS         : natural := 28;     
     constant FP_TOTAL_BITS  : integer := FP_INTEGER_BITS + FP_FRACTION_BITS;
 
     subtype fixed_point_data_t is std_logic_vector(FP_TOTAL_BITS - 1 downto 0);
