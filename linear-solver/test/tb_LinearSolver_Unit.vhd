@@ -33,13 +33,13 @@ use work.Solver_pkg.all;
 --------------------------------------------------------------------------
 -- Testbench Entity
 --------------------------------------------------------------------------
-entity LinearSolver_Unit_tb is
-end entity LinearSolver_Unit_tb;
+entity tb_LinearSolver_Unit is
+end entity tb_LinearSolver_Unit;
 
 --------------------------------------------------------------------------
 -- Testbench Architecture
 --------------------------------------------------------------------------
-architecture sim of LinearSolver_Unit_tb is
+architecture sim of tb_LinearSolver_Unit is
 
     --------------------------------------------------------------------------
     -- Constants definition
