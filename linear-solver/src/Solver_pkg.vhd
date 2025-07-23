@@ -5,7 +5,7 @@
 --! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
 --! \date       23-06-2024
 --!
---! \version    1.0
+--! \version    1.1
 --!
 --! \copyright	Copyright (c) 2024 - All Rights reserved.
 --!
@@ -18,13 +18,15 @@
 --!
 --! \note		Revisions:
 --!				- 1.0	23-06-2024	<urielcontardi@hotmail.com>
---!				First revision.
+--!             - 1.1   23-07-2025  <longo.vinicius@gmail.com>
 --------------------------------------------------------------------------
 -- Default libraries
 --------------------------------------------------------------------------
 Library ieee;
 Use ieee.std_logic_1164.all;
 Use ieee.numeric_std.all;
+use ieee.math_real.all;
+
 
 --------------------------------------------------------------------------
 -- User packages
@@ -38,9 +40,9 @@ Package Solver_pkg is
     --------------------------------------------------------------------------
     -- Constants
     --------------------------------------------------------------------------
-    constant M_BITS         : natural := 16;     -- M Bits to Integer Representation
-    constant N_BITS         : natural := 32;     -- N Bits to Fraction Representation
-    constant FP_TOTAL_BITS  : integer := M_BITS + N_BITS;
+    constant FP_INTEGER_BITS         : natural := 16;     -- M Bits to Integer Representation
+    constant FP_FRACTION_BITS         : natural := 32;     -- N Bits to Fraction Representation
+    constant FP_TOTAL_BITS  : integer := FP_INTEGER_BITS + FP_FRACTION_BITS;
 
     subtype fixed_point_data_t is std_logic_vector(FP_TOTAL_BITS - 1 downto 0);
     type vector_fp_t is array (natural range <>) of fixed_point_data_t;
@@ -50,6 +52,7 @@ Package Solver_pkg is
     -- Functions | Procedures
     --------------------------------------------------------------------------
     function getMatrixRow(matrix : matrix_fp_t; row : integer) return vector_fp_t;
+    function to_fp (val : real) return fixed_point_data_t; 
 
 End package;
 
@@ -66,5 +69,21 @@ Package body Solver_pkg is
         end loop;
         return result;
     end function;
+
+    --------------------------------------------------------------------------
+    -- to_fp
+    --------------------------------------------------------------------------
+    -- Função de conversão de Ponto Fixo ROBUSTA (à prova de estouro de 32-bit)
+    function to_fp (val : real) return fixed_point_data_t is
+        constant SCALE      : real      := 2.0 ** FP_FRACTION_BITS;
+        variable int_val    : integer;
+        variable signed_val : signed(FP_TOTAL_BITS - 1 downto 0);
+    begin
+        int_val := integer(val * SCALE);
+        signed_val := to_signed(int_val, FP_TOTAL_BITS);
+
+        return std_logic_vector(signed_val);
+        
+    end function to_fp;
 
 End package body;
