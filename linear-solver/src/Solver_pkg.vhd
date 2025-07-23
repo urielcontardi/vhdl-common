@@ -40,8 +40,8 @@ Package Solver_pkg is
     --------------------------------------------------------------------------
     -- Constants
     --------------------------------------------------------------------------
-    constant FP_INTEGER_BITS         : natural := 16;     -- M Bits to Integer Representation
-    constant FP_FRACTION_BITS         : natural := 32;     -- N Bits to Fraction Representation
+    constant FP_INTEGER_BITS         : natural := 16;     
+    constant FP_FRACTION_BITS         : natural := 32;     
     constant FP_TOTAL_BITS  : integer := FP_INTEGER_BITS + FP_FRACTION_BITS;
 
     subtype fixed_point_data_t is std_logic_vector(FP_TOTAL_BITS - 1 downto 0);
@@ -73,7 +73,6 @@ Package body Solver_pkg is
     --------------------------------------------------------------------------
     -- to_fp
     --------------------------------------------------------------------------
-    -- Função de conversão de Ponto Fixo ROBUSTA (à prova de estouro de 32-bit)
     function to_fp (val : real) return fixed_point_data_t is
         constant SCALE      : real      := 2.0 ** FP_FRACTION_BITS;
         variable int_val    : integer;
