@@ -96,7 +96,7 @@ Begin
     -- Assign Output
     --------------------------------------------------------------------------
     busy_o      <= '1' when pipeline_mult /= (pipeline_mult'range => '0') or start_i = '1' else '0';
-    stateResult_o <= acmtr(FP_TOTAL_BITS + N_BITS - 1 downto N_BITS);
+    stateResult_o <= acmtr(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
 
     --------------------------------------------------------------------------
     -- Internal Signals
