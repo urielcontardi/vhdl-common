@@ -2,12 +2,12 @@
 --!
 --! \brief		
 --!
---! \author		Vinícius de Carvalho Monteiro Longo (longo@weg.net)
+--! \author		Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
 --! \date       22-07-2025
 --!
 --! \version    1.0
 --!
---! \copyright	Copyright (c) 2024 WEG - All Rights reserved.
+--! \copyright	Copyright (c) 2024 - All Rights reserved.
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
@@ -17,15 +17,23 @@
 --! \warning	None
 --!
 --! \note		Revisions:
---!				- 1.0	22-07-2025	<longo@weg.net>
+--!				- 1.0	22-07-2025	<longo.vinicius@gmail.com>
 --!				First revision.
-
+--------------------------------------------------------------------------
+-- Default libraries
+--------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--------------------------------------------------------------------------
+-- User packages
+--------------------------------------------------------------------------
 use work.Solver_pkg.all;
 
+--------------------------------------------------------------------------
+-- Entity declaration
+--------------------------------------------------------------------------
 entity LinearSolver_Manager is
     generic (
         N_SS                : natural := 5;   
@@ -45,6 +53,9 @@ entity LinearSolver_Manager is
     );
 end entity;
 
+--------------------------------------------------------------------------
+-- Architecture
+--------------------------------------------------------------------------
 architecture arch of LinearSolver_Manager is
     
     type state_t is (S_IDLE, S_BUSY);
@@ -93,4 +104,4 @@ begin
     Xvec_current_o <=  X_current_sig;           
     busy_o         <=  busy_sig;
 
-end arch ; -- arch
+end ;

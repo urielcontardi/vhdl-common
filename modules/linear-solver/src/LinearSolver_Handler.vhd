@@ -2,12 +2,13 @@
 --!
 --! \brief		
 --!
---! \author		Vinícius de Carvalho Monteiro Longo (longo@weg.net)
---! \date       22-07-2025
+--! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
+--!             Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
+--! \date       03-06-2024
 --!
 --! \version    1.0
 --!
---! \copyright	Copyright (c) 2024 WEG - All Rights reserved.
+--! \copyright	Copyright (c) 2024 - All Rights reserved.
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
@@ -17,10 +18,9 @@
 --! \warning	None
 --!
 --! \note		Revisions:
---!				- 1.0	22-07-2025	<longo@weg.net>
+--!             - 1.0	03-06-2024	<urielcontardi@hotmail.com>
+--!				- 1.0	22-07-2025	<longo.vinicius@gmail.com>
 --!				First revision.
-
-
 --------------------------------------------------------------------------
 -- Default libraries
 --------------------------------------------------------------------------

@@ -2,22 +2,22 @@
 --!
 --! \brief		
 --!
---! \author		Uriel Abe Contardi (e-uriel@weg.net)
+--! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
 --! \date       08-04-2022
 --!
 --! \version    1.0
 --!
---! \copyright	Copyright (c) 2021 WEG - All Rights reserved.
+--! \copyright	Copyright (c) 2021 - All Rights reserved.
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
 --! \note		Dependencies   : No specific dependencies
 --!
---! \ingroup	WCW
+--! \ingroup	None
 --! \warning	None
 --!
 --! \note		Revisions:
---!				- 1.0	08-04-2022	<e-uriel@weg.net>
+--!				- 1.0	08-04-2022	<urielcontardi@hotmail.com>
 --!				First revision.
 --------------------------------------------------------------------------
 -- Default libraries
@@ -87,4 +87,4 @@ begin
     end process;
 
     blinky_o <= blinky;
-end architecture rtl;
+end architecture ;

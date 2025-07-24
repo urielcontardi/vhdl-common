@@ -2,12 +2,12 @@
 --!
 --! \brief		
 --!
---! \author		Vinícius de Carvalho Monteiro Longo (longo@weg.net)
+--! \author		Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
 --! \date       23-07-2025
 --!
 --! \version    1.0
 --!
---! \copyright	Copyright (c) 2024 WEG - All Rights reserved.
+--! \copyright	Copyright (c) 2024 - All Rights reserved.
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
@@ -17,10 +17,11 @@
 --! \warning	None
 --!
 --! \note		Revisions:
---!				- 1.0	23-07-2025	<longo@weg.net>
+--!				- 1.0	23-07-2025	<longo.vinicius@gmail.com>
 --!				First revision.
-
-
+--------------------------------------------------------------------------
+-- Default libraries
+--------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

@@ -2,12 +2,12 @@
 --!
 --! \brief		
 --!
---! \author		Vinícius de Carvalho Monteiro Longo (longo@weg.net)
+--! \author		Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
 --! \date       23-07-2025
 --!
 --! \version    1.0
 --!
---! \copyright	Copyright (c) 2024 WEG - All Rights reserved.
+--! \copyright	Copyright (c) 2024 - All Rights reserved.
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
@@ -17,13 +17,18 @@
 --! \warning	None
 --!
 --! \note		Revisions:
---!				- 1.0	23-07-2025	<longo@weg.net>
+--!				- 1.0	23-07-2025	<longo.vinicius@gmail.com>
 --!				First revision.
-
+--------------------------------------------------------------------------
+-- Default libraries
+--------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--------------------------------------------------------------------------
+-- Entity declaration
+--------------------------------------------------------------------------
 entity PWMToVoltage is
     generic (
         VDC_VOLTAGE       : integer := 400;
@@ -37,6 +42,9 @@ entity PWMToVoltage is
     );
 end PWMToVoltage;
 
+--------------------------------------------------------------------------
+-- Architecture
+--------------------------------------------------------------------------
 architecture Behavioral of PWMToVoltage is
     constant VDC       : SIGNED(OUTPUT_BIT_WIDTH-1 downto 0) := to_signed(VDC_VOLTAGE, OUTPUT_BIT_WIDTH);
     constant VDC_HIGH  : SIGNED(OUTPUT_BIT_WIDTH-1 downto 0) := shift_left(VDC, FP_FRACTION_BITS); 
@@ -56,7 +64,6 @@ begin
         end if;
     end process;
 
-    -- Conversão para STD_LOGIC_VECTOR na saída
     v_in <= std_logic_vector(v_in_internal);
 
-end Behavioral;
+end ;

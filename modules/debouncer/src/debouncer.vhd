@@ -1,19 +1,24 @@
---! \file       debouncer.vhd
---! \brief                 
+--! \file		debouncer.vhd
 --!
---! \author     Guilherme Augusto Pangratz (e-gpangratz@weg.net)
---!				Uriel Abe Contardi (contardii@weg.net)
+--! \brief		
 --!
---! \note       Copyright (c) 2021 WEG - All Rights reserved.
+--! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
+--! \date       08-04-2022
 --!
---! \note       Target devices : MVW01-CCE03  
---! \note       Tool versions  : No specific tool
---! \note       Dependencies   : No specific dependencies
+--! \version    1.0
 --!
---! \ingroup    
---! \warning    
+--! \copyright	Copyright (c) 2021 - All Rights reserved.
 --!
-
+--! \note		Target devices : No specific target
+--! \note		Tool versions  : No specific tool
+--! \note		Dependencies   : No specific dependencies
+--!
+--! \ingroup	None
+--! \warning	None
+--!
+--! \note		Revisions:
+--!				- 1.0	08-04-2022	<urielcontardi@hotmail.com>
+--!				First revision.
 --------------------------------------------------------------------------
 -- Default libraries
 --------------------------------------------------------------------------
@@ -99,4 +104,4 @@ begin
 
 	output_i <= output_reg;
 
-end rtl;
+end ;
