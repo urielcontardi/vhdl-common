@@ -95,7 +95,7 @@ Begin
     --------------------------------------------------------------------------
     -- Assign Output
     --------------------------------------------------------------------------
-    busy_o      <= '1' when pipeline_mult /= (pipeline_mult'range => '0') or start_i = '1' else '0';
+    busy_o      <= '1' when pipeline_mult /= (pipeline_mult'range => '0') or start_i = '1' or data_valid = '1' else '0';
     stateResult_o <= acmtr(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
 
     --------------------------------------------------------------------------
@@ -131,13 +131,15 @@ Begin
             if start_i = '1' then
                 index <= 0;
                 data_valid <= '1';
-            elsif data_valid = '1' and index < TOTAL_OPERATIONS - 1 then
+                -- pipeline_mult <= pipeline_mult(pipeline_mult'left - 1 downto 0) & '1';
+            elsif data_valid = '1' and index < TOTAL_OPERATIONS -1 then
                 index <= index + 1;
             else
                 data_valid <= '0';
+                -- pipeline_mult <= pipeline_mult(pipeline_mult'left - 1 downto 0) & '0';
             end if;
 
-            -- Pipeline Multiplier
+            -- -- Pipeline Multiplier
             pipeline_mult <= pipeline_mult(pipeline_mult'left - 1 downto 0) & data_valid;
 
             -- Product adder
