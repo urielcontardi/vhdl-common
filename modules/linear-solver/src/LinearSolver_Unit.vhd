@@ -131,12 +131,10 @@ Begin
             if start_i = '1' then
                 index <= 0;
                 data_valid <= '1';
-                -- pipeline_mult <= pipeline_mult(pipeline_mult'left - 1 downto 0) & '1';
             elsif data_valid = '1' and index < TOTAL_OPERATIONS -1 then
                 index <= index + 1;
             else
                 data_valid <= '0';
-                -- pipeline_mult <= pipeline_mult(pipeline_mult'left - 1 downto 0) & '0';
             end if;
 
             -- -- Pipeline Multiplier
