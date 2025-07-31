@@ -1,14 +1,34 @@
+--! \file		tb_LinearSolverManager.vhd
+--!
+--! \brief		
+--!
+--! \author		Vinícius Longo (longo.vinicius@gmail.com)
+--! \date       17-07-2025
+--!
+--! \version    1.0
+--!
+--! \copyright	Copyright (c) 2025 - All Rights reserved.
+--!
+--! \note		Target devices : No specific target
+--! \note		Tool versions  : No specific tool
+--! \note		Dependencies   : No specific dependencies
+--!
+--! \ingroup
+--! \warning	None
+--!
+--! \note		Revisions:
+--!				
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.env.finish;
 
-use work.Solver_pkg.all; 
+use work.SolverPkg.all; 
 
-entity tb_LinearSolver_Manager is
-end entity tb_LinearSolver_Manager;
+entity tb_LinearSolverManager is
+end entity tb_LinearSolverManager;
 
-architecture sim of tb_LinearSolver_Manager is
+architecture sim of tb_LinearSolverManager is
 
     --------------------------------------------------------------------------
     -- Constantes para o Testbench
@@ -69,7 +89,7 @@ begin
     --------------------------------------------------------------------------
     -- Instanciação do Unit Under Test (UUT)
     --------------------------------------------------------------------------
-    UUT : entity work.LinearSolver_Manager
+    UUT : entity work.LinearSolverManager
     generic map (
         N_SS            => N_SS_TB,
         N_IN            => N_IN_TB

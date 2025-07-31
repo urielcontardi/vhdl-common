@@ -1,4 +1,4 @@
---! \file		LinearSolver_Manager.vhd
+--! \file		LinearSolverManager.vhd
 --!
 --! \brief		
 --!
@@ -29,12 +29,12 @@ use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- User packages
 --------------------------------------------------------------------------
-use work.Solver_pkg.all;
+use work.SolverPkg.all;
 
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-entity LinearSolver_Manager is
+entity LinearSolverManager is
     generic (
         N_SS                : natural := 5;   
         N_IN                : natural := 2  
@@ -56,7 +56,7 @@ end entity;
 --------------------------------------------------------------------------
 -- Architecture
 --------------------------------------------------------------------------
-architecture arch of LinearSolver_Manager is
+architecture arch of LinearSolverManager is
     
     type state_t is (S_IDLE, S_BUSY);
     signal current_state        : state_t := S_IDLE;
@@ -66,7 +66,7 @@ architecture arch of LinearSolver_Manager is
 
 begin
 
-    LSH: entity work.LinearSolver_Handler
+    LSH: entity work.LinearSolverHandler
     generic map(
         N_SS                => N_SS,
         N_IN                => N_IN

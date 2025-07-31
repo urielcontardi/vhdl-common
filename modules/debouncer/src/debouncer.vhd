@@ -1,4 +1,4 @@
---! \file		debouncer.vhd
+--! \file		Debouncer.vhd
 --!
 --! \brief		
 --!
@@ -29,7 +29,7 @@ use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-entity debouncer is
+entity Debouncer is
 	generic (
 		CICLES_TO_HIGH : integer   := 128;
 		CICLES_TO_LOW  : integer   := 128;
@@ -41,9 +41,9 @@ entity debouncer is
 		input_i  : in std_logic;
 		output_i : out std_logic
 	);
-end debouncer;
+end Debouncer;
 
-architecture rtl of debouncer is
+architecture rtl of Debouncer is
 	signal counter_h_reg, counter_h_next : integer range 0 to CICLES_TO_HIGH - 1;
 	signal counter_l_reg, counter_l_next : integer range 0 to CICLES_TO_LOW - 1;
 

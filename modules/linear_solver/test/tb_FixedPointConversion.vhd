@@ -1,4 +1,4 @@
---! \file		tb_fp_conversion.vhd
+--! \file		tb_FixedPointConversion.vhd
 --!
 --! \brief		
 --!
@@ -27,12 +27,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.env.finish; 
 
-use work.Solver_pkg.all;
+use work.SolverPkg.all;
 
-entity tb_fp_conversion is
-end entity tb_fp_conversion;
+entity tb_FixedPointConversion is
+end entity tb_FixedPointConversion;
 
-architecture sim of tb_fp_conversion is
+architecture sim of tb_FixedPointConversion is
 
     signal res_0_5          : fixed_point_data_t;
     signal res_minus_0_5          : fixed_point_data_t;

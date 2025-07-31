@@ -1,4 +1,4 @@
---! \file		uart_tx.vhd
+--! \file		UartTX.vhd
 --!
 --! \brief		
 --!
@@ -29,7 +29,7 @@ Use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-Entity Uart_TX is
+Entity UartTX is
 	Generic (
 		DATA_WIDTH		: natural 	:= 8; 
 		START_BIT		: std_logic := '0';
@@ -59,7 +59,7 @@ End Entity;
 --------------------------------------------------------------------------
 -- Architecture (system behavior)
 --------------------------------------------------------------------------
-Architecture behavior of Uart_TX is
+Architecture behavior of UartTX is
 
 	--// Data types
 		-- State Machine

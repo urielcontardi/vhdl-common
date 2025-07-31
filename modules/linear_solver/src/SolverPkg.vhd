@@ -1,4 +1,4 @@
---! \file		Solver_pkg.vhd
+--! \file		SolverPkg.vhd
 --!
 --! \brief		
 --!
@@ -34,7 +34,7 @@ use ieee.math_real.all;
 --------------------------------------------------------------------------
 -- Package
 --------------------------------------------------------------------------
-Package Solver_pkg is
+Package SolverPkg is
     
     --------------------------------------------------------------------------
     -- Constants
@@ -55,7 +55,7 @@ Package Solver_pkg is
 
 End package;
 
-Package body Solver_pkg is
+Package body SolverPkg is
 
     --------------------------------------------------------------------------
     -- getMatrixRow

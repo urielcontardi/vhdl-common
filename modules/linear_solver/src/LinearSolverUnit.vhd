@@ -1,4 +1,4 @@
---! \file		LinearSolver_Unit.vhd
+--! \file		LinearSolverUnit.vhd
 --!
 --! \brief		stateResult_o = A*X + B*U
 --!
@@ -30,12 +30,12 @@ Use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- User packages
 --------------------------------------------------------------------------
-use work.Solver_pkg.all;
+use work.SolverPkg.all;
 
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-Entity LinearSolver_Unit is
+Entity LinearSolverUnit is
     generic (
         N_SS    : natural := 5;    -- Number of State Space
         N_IN    : natural := 2     -- Inputs number of State Space
@@ -57,7 +57,7 @@ End entity;
 --------------------------------------------------------------------------
 -- Architecture
 --------------------------------------------------------------------------
-Architecture rtl of LinearSolver_Unit is
+Architecture rtl of LinearSolverUnit is
     
     constant TOTAL_OPERATIONS   : integer := N_SS+N_IN;
     constant MULTIPLIER_DELAY   : integer := 7;

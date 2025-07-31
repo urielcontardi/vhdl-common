@@ -1,9 +1,9 @@
---! \file		LinearSolver_Unit_tb.vhd
+--! \file		tb_LinearSolverHandler.vhd
 --!
---! \brief		stateResult_o = A*X + B*U
+--! \brief		
 --!
 --! \author		Vinícius Longo (longo.vinicius@gmail.com)
---! \date       14-07-2025
+--! \date       17-07-2025
 --!
 --! \version    1.0
 --!
@@ -28,18 +28,18 @@ use std.env.finish;
 --------------------------------------------------------------------------
 -- User packages
 --------------------------------------------------------------------------
-use work.Solver_pkg.all; 
+use work.SolverPkg.all; 
 
 --------------------------------------------------------------------------
 -- Testbench Entity
 --------------------------------------------------------------------------
-entity tb_LinearSolver_Unit is
-end entity tb_LinearSolver_Unit;
+entity tb_LinearSolverHandler is
+end entity tb_LinearSolverHandler;
 
 --------------------------------------------------------------------------
 -- Testbench Architecture
 --------------------------------------------------------------------------
-architecture sim of tb_LinearSolver_Unit is
+architecture sim of tb_LinearSolverHandler is
 
     --------------------------------------------------------------------------
     -- Constants definition
@@ -52,46 +52,62 @@ architecture sim of tb_LinearSolver_Unit is
     --------------------------------------------------------------------------
     -- Factors
     --------------------------------------------------------------------------
-    constant FACTORS1       : vector_fp_t(0 to N_SS_TB - 1) := (
-        to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0)
+    constant AMATRIX : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_SS_TB - 1) := (
+        (to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0)),
+        (to_fp(2.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0)),
+        (to_fp(3.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0)),
+        (to_fp(4.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0)),
+        (to_fp(5.0), to_fp(1.0), to_fp(1.0), to_fp(1.0), to_fp(1.0))
+    );
+    
+    constant BMATRIX : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_IN_TB - 1) := (
+        (to_fp(1.0), to_fp(1.0)),
+        (to_fp(1.0), to_fp(1.0)),
+        (to_fp(1.0), to_fp(1.0)),
+        (to_fp(1.0), to_fp(1.0)),
+        (to_fp(1.0), to_fp(1.0))
     );
 
-    constant FACTORS2       : vector_fp_t(0 to N_IN_TB - 1) := (
-       to_fp(2.0), to_fp(2.0)
+    constant XVECTOR : vector_fp_t(0 to N_SS_TB - 1) := (
+        to_fp(1.0), to_fp(2.0), to_fp(3.0), to_fp(4.0), to_fp(5.0)
     );
 
+    constant UVECTOR : vector_fp_t(0 to N_IN_TB - 1) := (
+        to_fp(1.0), to_fp(1.0)
+    );
+    
     --------------------------------------------------------------------------
     -- UUT ports
     --------------------------------------------------------------------------
-    signal sysclk_tb        : std_logic := '0';
-    signal start_i_tb       : std_logic;
-    signal Avec_i_tb        : vector_fp_t(0 to N_SS_TB - 1) := FACTORS1;
-    signal Xvec_i_tb        : vector_fp_t(0 to N_SS_TB - 1) := FACTORS1;
-    signal Bvec_i_tb        : vector_fp_t(0 to N_IN_TB - 1) := FACTORS2;
-    signal Uvec_i_tb        : vector_fp_t(0 to N_IN_TB - 1) := FACTORS2;
-    signal stateResult_o_tb : fixed_point_data_t;
-    signal busy_o_tb        : std_logic;
+    signal sysclk_tb            : std_logic := '0';
+    signal start_i_tb           : std_logic;
+    signal Amatrix_i_tb         : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_SS_TB - 1) := AMATRIX;
+    signal Xvec_i_tb            : vector_fp_t(0 to N_SS_TB - 1) := XVECTOR;
+    signal Bmatrix_i_tb         : matrix_fp_t(0 to N_SS_TB - 1, 0 to N_IN_TB - 1) := BMATRIX;
+    signal Uvec_i_tb            : vector_fp_t(0 to N_IN_TB - 1) := UVECTOR;
+    signal stateResultVec_o_tb  : vector_fp_t(0 to N_SS_TB - 1);
+    signal busy_o_tb            : std_logic;
 
 begin
 
     --------------------------------------------------------------------------
     -- Unit Under Test
     --------------------------------------------------------------------------
-    uut: Entity work.LinearSolver_Unit
-        generic map (
-            N_SS => N_SS_TB,
-            N_IN => N_IN_TB
-        )
-        port map (
-            sysclk        => sysclk_tb,
-            start_i       => start_i_tb,
-            Avec_i        => Avec_i_tb,
-            Xvec_i        => Xvec_i_tb,
-            Bvec_i        => Bvec_i_tb,
-            Uvec_i        => Uvec_i_tb,
-            stateResult_o => stateResult_o_tb,
-            busy_o        => busy_o_tb
-        );
+    LSH: Entity work.LinearSolverHandler
+    generic map (
+        N_SS                => N_SS_TB,
+        N_IN                => N_IN_TB
+    )
+    Port map(
+        sysclk              => sysclk_tb,       
+        start_i             => start_i_tb,      
+        Amatrix_i           => Amatrix_i_tb,    
+        Xvec_i              => Xvec_i_tb,    
+        Bmatrix_i           => Bmatrix_i_tb,    
+        Uvec_i              => Uvec_i_tb,    
+        stateResultVec_o    => stateResultVec_o_tb,
+        busy_o              => busy_o_tb       
+    );
 
 
     --------------------------------------------------------------------------
@@ -106,9 +122,9 @@ begin
     end process;
 
 
-    --------------------------------------------------------------------------
-    -- Stimulus
-    --------------------------------------------------------------------------
+--------------------------------------------------------------------------
+-- Stimulus
+--------------------------------------------------------------------------
     stimulus_process: process
 
     begin
@@ -127,6 +143,5 @@ begin
         wait for MINIMUM_CYCLES * CLK_PERIOD;
         finish;
     end process;
-
 
 end architecture sim;

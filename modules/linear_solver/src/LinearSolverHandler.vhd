@@ -1,4 +1,4 @@
---! \file		LinearSolver_Handler.vhd
+--! \file		LinearSolverHandler.vhd
 --!
 --! \brief		
 --!
@@ -31,12 +31,12 @@ use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- User packages
 --------------------------------------------------------------------------
-use work.Solver_pkg.all;
+use work.SolverPkg.all;
 
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-Entity LinearSolver_Handler is
+Entity LinearSolverHandler is
     generic (
         N_SS    : natural := 5;    -- Number of State Space
         N_IN    : natural := 2     -- Inputs number of State Space
@@ -58,7 +58,7 @@ End entity;
 --------------------------------------------------------------------------
 -- Architecture
 --------------------------------------------------------------------------
-Architecture arch of LinearSolver_Handler is
+Architecture arch of LinearSolverHandler is
 
     signal busy_vec     : std_logic_vector(0 to N_SS -1);
     signal start_sig    : std_logic;  
@@ -80,7 +80,7 @@ Architecture arch of LinearSolver_Handler is
             end process;
 
 
-            LSU: Entity work.LinearSolver_Unit
+            LSU: Entity work.LinearSolverUnit
             Generic map (
                 N_SS            => N_SS,
                 N_IN            => N_IN
