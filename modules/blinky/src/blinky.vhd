@@ -1,4 +1,4 @@
---! \file		blinky.vhd
+--! \file		Blinky.vhd
 --!
 --! \brief		
 --!
@@ -33,7 +33,7 @@ use ieee.numeric_std.all;
 --------------------------------------------------------------------------
 -- Entity declaration
 --------------------------------------------------------------------------
-entity blinky is
+entity Blinky is
     generic (
         CLK_FREQ         : integer := 160e6;
         BLINKY_PERIOD_US : integer := 1e6
@@ -45,12 +45,12 @@ entity blinky is
         blinky_o : out std_logic
     );
 
-end entity blinky;
+end entity Blinky;
 
 --------------------------------------------------------------------------
 -- Architecture 1
 --------------------------------------------------------------------------
-architecture rtl of blinky is
+architecture rtl of Blinky is
 
     --------------------------------------------------------------------------
     -- Signals
