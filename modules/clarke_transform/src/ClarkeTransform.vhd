@@ -70,10 +70,10 @@ End entity;
 --------------------------------------------------------------------------
 Architecture rtl of ClarkeTransform is
     
-    -- Constants
-    constant COEFF_2_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(2.0/3.0 * 2**FRAC_WIDTH), DATA_WIDTH);  -- 2/3
-    constant COEFF_1_SQRT3 : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/1.732050808 * 2**FRAC_WIDTH), DATA_WIDTH); -- 1/√3
-    constant COEFF_1_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/3.0 * 2**FRAC_WIDTH), DATA_WIDTH);  -- 1/3
+    -- Constants (calculated for fixed point representation)
+    constant COEFF_2_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(2.0/3.0 * real(2**FRAC_WIDTH)), DATA_WIDTH);  -- 2/3
+    constant COEFF_1_SQRT3 : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/1.732050808 * real(2**FRAC_WIDTH)), DATA_WIDTH); -- 1/√3
+    constant COEFF_1_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/3.0 * real(2**FRAC_WIDTH)), DATA_WIDTH);  -- 1/3
 
     -- Input Signals
     signal a : signed(DATA_WIDTH - 1 downto 0);
