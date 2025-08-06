@@ -8,9 +8,10 @@
 --!             All operations are performed in fixed-point (two's complement).
 --!            
 --! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
+--! \author		Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
 --! \date       06-06-2025
 --!
---! \version    1.0
+--! \version    1.1
 --!
 --! \note		Target devices : No specific target
 --! \note		Tool versions  : No specific tool
@@ -21,6 +22,7 @@
 --!
 --! \note		Revisions:
 --!				- 1.0	06-06-2025	<urielcontardi@hotmail.com>
+--!				- 1.1	06-08-2025	<longo.vinicius@gmail.com>
 --!				First revision.
 --------------------------------------------------------------------------
 -- Default libraries
@@ -67,9 +69,8 @@ End entity;
 -- Architecture
 --------------------------------------------------------------------------
 Architecture rtl of ClarkeTransform is
-   
-    -- Constantes para os coeficientes em ponto fixo
-    -- Para FRAC_WIDTH = 12: 2^12 = 4096
+    
+    -- Constants
     constant COEFF_2_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(2.0/3.0 * 2**FRAC_WIDTH), DATA_WIDTH);  -- 2/3
     constant COEFF_1_SQRT3 : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/1.732050808 * 2**FRAC_WIDTH), DATA_WIDTH); -- 1/√3
     constant COEFF_1_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/3.0 * 2**FRAC_WIDTH), DATA_WIDTH);  -- 1/3
@@ -81,15 +82,15 @@ Architecture rtl of ClarkeTransform is
 
     -- Alpha Signals
     signal alphaSum     : signed(DATA_WIDTH downto 0);  -- Extra bit for overflow
-    signal alpha        : signed(2*DATA_WIDTH-1 downto 0);
+    signal alpha        : signed(2*DATA_WIDTH downto 0); 
     
     -- Beta Signals
     signal betaSum      : signed(DATA_WIDTH downto 0);
-    signal beta         : signed(2*DATA_WIDTH-1 downto 0);
+    signal beta         : signed(2*DATA_WIDTH downto 0); 
     
     -- Zero Signals
     signal zeroSum      : signed(DATA_WIDTH+1 downto 0); -- 2x Extra bit for overflow
-    signal zero         : signed(DATA_WIDTH*2-1 downto 0);
+    signal zero         : signed(2*DATA_WIDTH+1 downto 0);
     
     -- Pipeline
     signal validReg     : std_logic_vector(1 downto 0) := (others => '0');
@@ -109,7 +110,7 @@ Begin
     Process(sysclk, reset_n)
         variable b_half, c_half     : signed(DATA_WIDTH-1 downto 0);
     Begin
-        if reset_n = '1' then
+        if reset_n = '0' then
 
             alphaSum <= (others => '0');
             betaSum  <= (others => '0');
@@ -118,6 +119,10 @@ Begin
             beta     <= (others => '0');
             zero     <= (others => '0');
             validReg <= (others => '0');
+            alpha_o  <= (others => '0'); 
+            beta_o   <= (others => '0'); 
+            zero_o   <= (others => '0'); 
+            data_valid_o <= '0';
             
         elsif rising_edge(sysclk) then
 
@@ -128,20 +133,20 @@ Begin
             b_half := shift_right(b, 1); -- Divide by 2
             c_half := shift_right(c, 1); -- Divide by 2
             alphaSum <= resize(a, DATA_WIDTH+1) - resize(b_half, DATA_WIDTH+1) - resize(c_half, DATA_WIDTH+1);
-            alpha    <= resize(COEFF_2_3, 2*DATA_WIDTH) * resize(alphaSum, 2*DATA_WIDTH);
+            alpha <= COEFF_2_3 * alphaSum;
             
             -- Beta Calculation: (1/√3) * (b - c)
             betaSum <= resize(b, DATA_WIDTH+1) - resize(c, DATA_WIDTH+1);
-            beta    <= resize(COEFF_1_SQRT3, 2*DATA_WIDTH) * resize(betaSum, 2*DATA_WIDTH);
+            beta  <= COEFF_1_SQRT3 * betaSum;
 
             -- Zero Calculation: (1/3) * (a + b + c)
             zeroSum <= resize(a, DATA_WIDTH+2) + resize(b, DATA_WIDTH+2) + resize(c, DATA_WIDTH+2);
-            zero    <= resize(COEFF_1_3, 2*DATA_WIDTH) * resize(zeroSum, 2*DATA_WIDTH);
+            zero  <= COEFF_1_3 * zeroSum;
 
             -- Assign outputs
-            alpha_o      <= resize(alpha(2*DATA_WIDTH-1 downto DATA_WIDTH), DATA_WIDTH);
-            beta_o       <= resize(beta(2*DATA_WIDTH-1 downto DATA_WIDTH), DATA_WIDTH);
-            zero_o       <= resize(zero(2*DATA_WIDTH-1 downto DATA_WIDTH), DATA_WIDTH);
+            alpha_o <= alpha(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
+            beta_o  <= beta(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
+            zero_o  <= zero(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
             data_valid_o <= validReg(1);
 
         End if;
