@@ -86,4 +86,18 @@ Begin
                    rising_edge_det when EDGE = '1' else
                    falling_edge_det;
 
+    --------------------------------------------------------------------------
+    -- Register edge_detect to produce a one-clock tick_o pulse
+    --------------------------------------------------------------------------
+    process(sysclk, reset_n)
+    begin
+        if reset_n = '0' then
+            tick_reg <= '0';
+        elsif rising_edge(sysclk) then
+            tick_reg <= edge_detect;
+        end if;
+    end process;
+
+    tick_o <= tick_reg;
+
 End architecture;
