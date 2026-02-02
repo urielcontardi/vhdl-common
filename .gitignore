@@ -1,0 +1,23 @@
+# GHDL generated files
+*.cf
+work-obj*.cf
+
+# Simulation waveforms
+*.ghw
+
+# Vivado generated files
+*.jou
+*.log
+*.str
+
+# Sphinx build outputs
+doc/build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
