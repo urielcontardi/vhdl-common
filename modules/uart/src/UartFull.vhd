@@ -93,6 +93,9 @@ architecture Structural of UartFull is
     signal tx_done          : std_logic;
     signal tx_busy          : std_logic;
     
+    -- TX data latch: captures FIFO data before it changes
+    signal tx_data_latch    : std_logic_vector(G_DATA_WIDTH - 1 downto 0);
+    
     -- TX state machine
     type t_tx_state is (ST_TX_IDLE, ST_TX_WAIT_DATA, ST_TX_SEND, ST_TX_WAIT_DONE);
     signal tx_state_reg     : t_tx_state := ST_TX_IDLE;
@@ -155,7 +158,7 @@ begin
             reset_n    => rst_n_i,
             start_i    => tx_start,
             baudrate_i => baudrate_cfg,
-            data_i     => tx_fifo_rd_data,
+            data_i     => tx_data_latch,  -- Use latched data (captured before FIFO rd_idx advances)
             tx_o       => tx_o,
             tx_done_o  => tx_done
         );
@@ -167,9 +170,15 @@ begin
     TX_Ctrl_Seq : process(clk_i, rst_n_i)
     begin
         if rst_n_i = '0' then
-            tx_state_reg <= ST_TX_IDLE;
+            tx_state_reg  <= ST_TX_IDLE;
+            tx_data_latch <= (others => '0');
         elsif rising_edge(clk_i) then
             tx_state_reg <= tx_state_next;
+            
+            -- Latch FIFO data when reading (before rd_idx advances)
+            if tx_fifo_rd_en = '1' then
+                tx_data_latch <= tx_fifo_rd_data;
+            end if;
         end if;
     end process TX_Ctrl_Seq;
 
