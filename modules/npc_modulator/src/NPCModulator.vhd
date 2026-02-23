@@ -276,7 +276,7 @@ Begin
     -- Output register (optional)
     --------------------------------------------------------------------------
     gen_output_reg: if OUTPUT_REG generate
-        output_reg: process(sysclk, reset_n)
+        p_output_reg: process(sysclk, reset_n)
         begin
             if reset_n = '0' then
                 state_a_o <= "01";
