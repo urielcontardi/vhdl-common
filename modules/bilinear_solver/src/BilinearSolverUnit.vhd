@@ -125,14 +125,15 @@ Begin
     operand2_vec(0 to N_SS - 1)  <= Xvec_i;
     operand2_vec(N_SS to TOTAL_OPERATIONS - 1) <= Uvec_i;
 
-    YVec : process (Yvec_i)
+    YVec : process (Yvec_i, Xvec_i)
         variable index : integer range 0 to N_SS - 1;
     begin
         for aa in 0 to N_SS - 1 loop
 
             -- If Y is not used, set it to a negative value (e.g., -1)
             -- This will effectively ignore the Y vector in the multiplication.
-            if Yvec_i(aa)(FP_TOTAL_BITS - 1) = '1' then
+            -- Also guard against metavalue ('U'/'X') during initialization.
+            if is_x(Yvec_i(aa)) or Yvec_i(aa)(FP_TOTAL_BITS - 1) = '1' then
                 operand3_vec(aa) <= FIXED_POINT_ONE;
             else
                 index := to_integer(signed(Yvec_i(aa)));
