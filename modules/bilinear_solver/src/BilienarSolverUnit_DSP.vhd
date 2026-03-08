@@ -29,8 +29,8 @@ architecture behavior of BilienarSolverUnit_DSP is
     signal pipe_reg : pipe_t(0 to LATENCY-1) := (others => (others => '0'));
 begin
 
-    -- Combinational product (computed each cycle, latched into pipeline)
-    product_comb <= resize(A_s, product_comb'length) * resize(B_s, product_comb'length);
+    -- Combinational product: FP_TOTAL_BITS x FP_TOTAL_BITS → 2*FP_TOTAL_BITS
+    product_comb <= A_s * B_s;
 
     process(CLK)
     begin
