@@ -77,8 +77,8 @@ Package body BilinearSolverPkg is
         -- Initialize result
         result := (others => '0');
         
-        -- Convert absolute value to binary
-        temp_val := abs_val;
+        -- Convert absolute value to binary (add 0.5 for round-to-nearest)
+        temp_val := abs_val + 0.5;
         for i in FP_TOTAL_BITS - 2 downto 0 loop
             bit_weight := 2.0 ** i;
             if temp_val >= bit_weight then
