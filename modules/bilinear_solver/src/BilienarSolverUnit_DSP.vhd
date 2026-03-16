@@ -20,35 +20,24 @@ entity BilienarSolverUnit_DSP is
 end entity;
 
 architecture behavior of BilienarSolverUnit_DSP is
-    signal A_s : signed(FP_TOTAL_BITS - 1 downto 0);
-    signal B_s : signed(FP_TOTAL_BITS - 1 downto 0);
-    signal product_comb : signed((2*FP_TOTAL_BITS)-1 downto 0);
-
     -- Pipeline registers for the product
-    type pipe_t is array (natural range <>) of std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
-    signal pipe_reg : pipe_t(0 to LATENCY-1) := (others => (others => '0'));
+    type pipe_t is array (0 to LATENCY-1) of std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
+    signal pipe_reg : pipe_t := (others => (others => '0'));
 begin
 
-    -- Combinational product: FP_TOTAL_BITS x FP_TOTAL_BITS → 2*FP_TOTAL_BITS
-    product_comb <= A_s * B_s;
-
     process(CLK)
+        variable product_v : signed((2*FP_TOTAL_BITS)-1 downto 0);
     begin
         if rising_edge(CLK) then
-            A_s <= signed(A);
-            B_s <= signed(B);
-
-            -- Shift pipeline: first stage gets current product
-            if LATENCY > 0 then
-                pipe_reg(0) <= std_logic_vector(product_comb);
-                for i in 1 to LATENCY-1 loop
-                    pipe_reg(i) <= pipe_reg(i-1);
-                end loop;
-                P <= pipe_reg(LATENCY-1);
-            else
-                -- No pipeline requested: output combinational product registered
-                P <= std_logic_vector(product_comb);
-            end if;
+            product_v := signed(A) * signed(B);
+            pipe_reg(0) <= std_logic_vector(product_v);
+            for i in 1 to LATENCY-1 loop
+                pipe_reg(i) <= pipe_reg(i-1);
+            end loop;
         end if;
     end process;
+
+    -- Combinatorial output: effective latency = exactly LATENCY cycles
+    P <= pipe_reg(LATENCY-1);
+
 end architecture;
