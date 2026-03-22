@@ -1,13 +1,18 @@
 --! \file		BilinearSolverUnit.vhd
 --!
---! \brief		stateResult_o = A * X * Y + B * U
+--! \brief		stateResult_o = (X * X_Y) * A + B * U
 --!
---!             In this case, Y acts as a selector for the state vector X.
---!             This allows the solver to multiply two different state variables,
---!             enabling more flexible state-space computations.
+--!             Two-stage multiply pipeline:
+--!               Stage 1 (Multiplier1): product1 = X[i] * X[Y[i]]
+--!                 Both operands are state variables (large magnitude) so the
+--!                 Q14.28 intermediate product does not underflow.
+--!               Stage 2 (Multiplier2): product2 = product1 * A[i]
+--!                 The small coefficient A[i] is applied last, in the full
+--!                 84-bit accumulator domain before final extraction.
 --!
---!             If Y is not used, it can be set to a negative value (e.g., -1) to
---!             indicate that it should not be considered in the multiplication.
+--!             Y acts as an index selector for the second state operand.
+--!             Set Y[i] < 0 to disable the bilinear coupling for row i
+--!             (operand2 defaults to FIXED_POINT_ONE, so result = X[i] * A[i]).
 --!
 --! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
 --! \date       31-07-2025
@@ -74,7 +79,7 @@ Architecture rtl of BilinearSolverUnit is
     -- Handle Input to do logic
     signal operand1_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
     signal operand2_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
-    signal operand3_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1) := (others => FIXED_POINT_ONE);
+    signal operand3_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
     signal operand1             : fixed_point_data_t;
     signal operand2             : fixed_point_data_t;
     signal operand3             : fixed_point_data_t;
@@ -130,33 +135,34 @@ Begin
     --------------------------------------------------------------------------
     -- Internal Signals
     --------------------------------------------------------------------------
-    operand1_vec(0 to N_SS - 1)  <= Avec_i;
+    -- Stage 1 operands: X[i] (state) or B[j] (input coefficient)
+    operand1_vec(0 to N_SS - 1)              <= Xvec_i;
     operand1_vec(N_SS to TOTAL_OPERATIONS - 1) <= Bvec_i;
 
-    operand2_vec(0 to N_SS - 1)  <= Xvec_i;
+    -- Stage 1 second operand: X[Y[i]] for state rows, U[j] for input rows
     operand2_vec(N_SS to TOTAL_OPERATIONS - 1) <= Uvec_i;
 
     YVec : process (Yvec_i, Xvec_i)
         variable index : integer range 0 to N_SS - 1;
     begin
         for aa in 0 to N_SS - 1 loop
-
-            -- If Y is not used, set it to a negative value (e.g., -1)
-            -- This will effectively ignore the Y vector in the multiplication.
-            -- Also guard against metavalue ('U'/'X') during initialization.
+            -- Y[i] < 0 means no bilinear coupling: operand2 = 1 so product1 = X[i]
+            -- Guard against metavalue ('U'/'X') during initialization.
             if is_x(Yvec_i(aa)) or Yvec_i(aa)(FP_TOTAL_BITS - 1) = '1' then
-                operand3_vec(aa) <= FIXED_POINT_ONE;
+                operand2_vec(aa) <= FIXED_POINT_ONE;
             else
                 index := to_integer(signed(Yvec_i(aa)));
-                operand3_vec(aa) <= Xvec_i(index);
+                operand2_vec(aa) <= Xvec_i(index);
             end if;
         end loop;
     end process;
 
-    -- We need these elements just to keep a cleaner architecture
-    -- In this case, we fill with the value FIXED_POINT_ONE so that it does not
-    -- influence the multiplication of Bvec_i and Uvec_i
-    gen_operand3 : for i in N_SS to TOTAL_OPERATIONS - 1 generate
+    -- Stage 2 operands: A[i] for state rows (applied last, in 84-bit domain),
+    -- FIXED_POINT_ONE for input rows (B*U already complete after stage 1).
+    gen_operand3_state : for i in 0 to N_SS - 1 generate
+        operand3_vec(i) <= Avec_i(i);
+    end generate;
+    gen_operand3_input : for i in N_SS to TOTAL_OPERATIONS - 1 generate
         operand3_vec(i) <= FIXED_POINT_ONE;
     end generate;
     
