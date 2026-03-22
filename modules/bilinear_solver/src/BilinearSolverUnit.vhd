@@ -134,15 +134,23 @@ Begin
 
     --------------------------------------------------------------------------
     -- Internal Signals
+    -- Each operand vector is driven by a single process to avoid mixed-driver
+    -- issues (process + concurrent slice) in GHDL simulation.
     --------------------------------------------------------------------------
+
     -- Stage 1 operands: X[i] (state) or B[j] (input coefficient)
-    operand1_vec(0 to N_SS - 1)              <= Xvec_i;
-    operand1_vec(N_SS to TOTAL_OPERATIONS - 1) <= Bvec_i;
+    Operand1Assign : process(Xvec_i, Bvec_i)
+    begin
+        for i in 0 to N_SS - 1 loop
+            operand1_vec(i) <= Xvec_i(i);
+        end loop;
+        for j in 0 to N_IN - 1 loop
+            operand1_vec(N_SS + j) <= Bvec_i(j);
+        end loop;
+    end process;
 
     -- Stage 1 second operand: X[Y[i]] for state rows, U[j] for input rows
-    operand2_vec(N_SS to TOTAL_OPERATIONS - 1) <= Uvec_i;
-
-    YVec : process (Yvec_i, Xvec_i)
+    YVec : process (Yvec_i, Xvec_i, Uvec_i)
         variable index : integer range 0 to N_SS - 1;
     begin
         for aa in 0 to N_SS - 1 loop
@@ -155,16 +163,22 @@ Begin
                 operand2_vec(aa) <= Xvec_i(index);
             end if;
         end loop;
+        for j in 0 to N_IN - 1 loop
+            operand2_vec(N_SS + j) <= Uvec_i(j);
+        end loop;
     end process;
 
     -- Stage 2 operands: A[i] for state rows (applied last, in 84-bit domain),
     -- FIXED_POINT_ONE for input rows (B*U already complete after stage 1).
-    gen_operand3_state : for i in 0 to N_SS - 1 generate
-        operand3_vec(i) <= Avec_i(i);
-    end generate;
-    gen_operand3_input : for i in N_SS to TOTAL_OPERATIONS - 1 generate
-        operand3_vec(i) <= FIXED_POINT_ONE;
-    end generate;
+    Operand3Assign : process(Avec_i)
+    begin
+        for i in 0 to N_SS - 1 loop
+            operand3_vec(i) <= Avec_i(i);
+        end loop;
+        for i in N_SS to TOTAL_OPERATIONS - 1 loop
+            operand3_vec(i) <= FIXED_POINT_ONE;
+        end loop;
+    end process;
     
     --------------------------------------------------------------------------
     -- Multiplier
