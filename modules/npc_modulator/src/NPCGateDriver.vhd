@@ -231,9 +231,11 @@ Begin
             when ST_OFF =>
                 pwm_next <= VEC_OFF;
 
-                -- Safe StartUp: require transition TO ZERO (neutral)
-                if (en_sync = '1') and (fault = '0') and 
-                   (state_i = ST_ZERO_IN) and (state_i_last /= ST_ZERO_IN) then
+                -- Exit ST_OFF when enabled and modulator commands NEUTRAL.
+                -- Original condition required a transition (state_i_last /= NEUTRAL)
+                -- but this was never satisfied in hardware.
+                if (en_sync = '1') and (fault = '0') and
+                   (state_i = ST_ZERO_IN) then
                     state_next <= ST_ZERO;
                 end if;
 

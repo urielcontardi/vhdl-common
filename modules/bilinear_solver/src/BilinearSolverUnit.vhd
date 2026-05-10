@@ -98,20 +98,18 @@ Architecture rtl of BilinearSolverUnit is
     signal product1             : fixed_point_data_t;
     signal product2_raw         : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
 
-    -- Round-to-nearest constant: 2^(FP_FRACTION_BITS-1) in the Q28.56 accumulator domain
-    -- Adding this half-LSB before truncation eliminates systematic floor bias
+    -- Round-to-nearest: add 2^(FP_FRACTION_BITS-1) before truncating to Q14.28
     constant ROUND_HALF_P1  : signed((2*FP_TOTAL_BITS)-1 downto 0) :=
-        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);   -- 2^27 (half-LSB for product1)
+        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);
     constant ROUND_HALF_P2  : signed((2*FP_TOTAL_BITS)-1 downto 0) :=
-        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);   -- 2^27 (half-LSB for product2)
+        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);
 
     -- Accumulator
     signal acmtr                : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0) := (others => '0');
     signal acmtr_rounded        : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
 
     --------------------------------------------------------------------------
-    -- Component Declaration
-    -- Note: This component is a DSP48 IP core from Xilinx
+    -- Component Declaration — Xilinx mult_gen IP (C_MULT_TYPE=1 → DSP48E1)
     --------------------------------------------------------------------------
     component BilienarSolverUnit_DSP
     port (
@@ -125,8 +123,7 @@ Architecture rtl of BilinearSolverUnit is
 Begin
 
     --------------------------------------------------------------------------
-    -- Assign Output
-    -- Round-to-nearest: add half-LSB before truncating accumulator to Q14.28
+    -- Assign Output — round-to-nearest before truncating accumulator to Q14.28
     --------------------------------------------------------------------------
     acmtr_rounded <= std_logic_vector(signed(acmtr) + ROUND_HALF_P2);
     stateResult_o <= acmtr_rounded(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
@@ -191,12 +188,11 @@ Begin
         P => product1_raw
     );
     
-    operand1        <= operand1_vec(index1);
-    operand2        <= operand2_vec(index1);
-    -- Round-to-nearest: add half-LSB (2^27) before discarding the fractional bits
+    operand1 <= operand1_vec(index1);
+    operand2 <= operand2_vec(index1);
     product1_rounded <= std_logic_vector(signed(product1_raw) + ROUND_HALF_P1);
     product1         <= product1_rounded(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
-    
+
     Multiplier2 : BilienarSolverUnit_DSP
     port map (
         CLK => sysclk,
