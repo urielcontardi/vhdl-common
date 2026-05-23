@@ -73,23 +73,24 @@ End entity;
 Architecture rtl of BilinearSolverUnit is
 
     constant TOTAL_OPERATIONS   : integer := N_SS+N_IN;
-    constant MULTIPLIER_DELAY   : integer := 7;
+    constant MULTIPLIER_DELAY   : integer := 8;
     constant FIXED_POINT_ONE    : fixed_point_data_t := std_logic_vector(to_signed(2**FP_FRACTION_BITS, FP_TOTAL_BITS));
 
     -- Handle Input to do logic
     signal operand1_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
     signal operand2_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
     signal operand3_vec         : vector_fp_t(0 to TOTAL_OPERATIONS - 1);
-    signal operand1             : fixed_point_data_t;
-    signal operand2             : fixed_point_data_t;
-    signal operand3             : fixed_point_data_t;
+    signal operand1             : fixed_point_data_t := (others => '0');
+    signal operand2             : fixed_point_data_t := (others => '0');
+    signal operand3_mux         : fixed_point_data_t;
 
     -- Sequencer
     signal pipeline1            : std_logic_vector(MULTIPLIER_DELAY - 1 downto 0) := (others => '0');
     signal pipeline2            : std_logic_vector(MULTIPLIER_DELAY - 1 downto 0) := (others => '0');
-    signal index1               : integer range 0 to TOTAL_OPERATIONS;
-    signal index2               : integer range 0 to TOTAL_OPERATIONS;
+    signal index1               : integer range 0 to TOTAL_OPERATIONS := 0;
+    signal index2               : integer range 0 to TOTAL_OPERATIONS := 0;
     signal pipeline3_tgr        : std_logic := '0';
+    signal result_latch_pending : std_logic := '0';
     signal busy                 : std_logic := '0';
 
     -- Multiplier Signals
@@ -106,7 +107,7 @@ Architecture rtl of BilinearSolverUnit is
 
     -- Accumulator
     signal acmtr                : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0) := (others => '0');
-    signal acmtr_rounded        : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
+    signal stateResult_r       : fixed_point_data_t := (others => '0');
 
     --------------------------------------------------------------------------
     -- Component Declaration — Xilinx mult_gen IP (C_MULT_TYPE=1 → DSP48E1)
@@ -122,11 +123,12 @@ Architecture rtl of BilinearSolverUnit is
 
 Begin
 
+    operand3_mux <= operand3_vec(index2);
+
     --------------------------------------------------------------------------
     -- Assign Output — round-to-nearest before truncating accumulator to Q14.28
     --------------------------------------------------------------------------
-    acmtr_rounded <= std_logic_vector(signed(acmtr) + ROUND_HALF_P2);
-    stateResult_o <= acmtr_rounded(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
+    stateResult_o <= stateResult_r;
     busy_o        <= busy;
 
     --------------------------------------------------------------------------
@@ -188,8 +190,7 @@ Begin
         P => product1_raw
     );
     
-    operand1 <= operand1_vec(index1);
-    operand2 <= operand2_vec(index1);
+    -- Registered operand selects keep the index/mux logic out of the DSP input timing path.
     product1_rounded <= std_logic_vector(signed(product1_raw) + ROUND_HALF_P1);
     product1         <= product1_rounded(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS);
 
@@ -197,11 +198,10 @@ Begin
     port map (
         CLK => sysclk,
         A => product1,
-        B => operand3,
+        B => operand3_mux,
         P => product2_raw
     );
 
-    operand3    <= operand3_vec(index2);
 
     --------------------------------------------------------------------------
     -- Sequencer
@@ -209,8 +209,13 @@ Begin
     process(sysclk)
         variable pipeline1_tgr  : std_Logic := '0';
         variable pipeline2_tgr  : std_Logic := '0';
+        variable sum_v          : signed((2*FP_TOTAL_BITS)-1 downto 0);
+        variable rounded_v      : signed((2*FP_TOTAL_BITS)-1 downto 0);
     begin
         if rising_edge(sysclk) then
+            operand1 <= operand1_vec(index1);
+            operand2 <= operand2_vec(index1);
+
             
             --------------------------------------------------------------------------
             -- Pipeline Trigger
@@ -254,8 +259,17 @@ Begin
             if start_i = '1' and busy = '0' then
                 acmtr <= (others => '0');
             elsif pipeline3_tgr = '1' then
-                acmtr <= std_logic_vector(signed(acmtr) + signed(product2_raw));
+                sum_v := signed(acmtr) + signed(product2_raw);
+                acmtr <= std_logic_vector(sum_v);
             end if;
+
+            -- Pipeline the accumulator-to-result rounding one cycle after a
+            -- valid accumulation, then hold the value until the next result.
+            if result_latch_pending = '1' then
+                rounded_v := signed(acmtr) + ROUND_HALF_P2;
+                stateResult_r <= std_logic_vector(rounded_v(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS));
+            end if;
+            result_latch_pending <= pipeline3_tgr;
 
             --------------------------------------------------------------------------
             -- Busy Signal

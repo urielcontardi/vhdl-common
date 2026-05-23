@@ -7,24 +7,18 @@
 --!                 - X_zero  = (1/3) × (Xa + Xb + Xc)
 --!             All operations are performed in fixed-point (two's complement).
 --!
---!             PIPELINE (6 stages, 5-cycle input-to-output latency):
+--!             PIPELINE:
 --!               Stage 0: register inputs  (a_reg, b_reg, c_reg)
---!               Stage 1: compute sums     (alphaSum, betaSum, zeroSum)
---!               Stage 2: re-register sums (alphaSum_r, betaSum_r, zeroSum_r)
---!                        — retimeable register absorbed into DSP AREG=1 by
---!                          Vivado synthesis retiming (-retiming flag).
---!               Stage 3: multiply         (dsp_alpha_m = COEFF × sum_r)
---!                        — retimeable register absorbed into DSP MREG=1.
---!               Stage 4: P-register       (alpha, beta, zero)
---!               Stage 5: output register  (alpha_o, beta_o, zero_o)
+--!               Stage 1: compute sums     (alphaSum, betaSum)
+--!               Stage 2: re-register sums (alphaSum_r, betaSum_r)
+--!               Stage 3: pipelined mult_gen DSPs (MULT_LATENCY = 7)
+--!               Stage 4: product register  (alpha, beta)
+--!               Stage 5: output register   (alpha_o, beta_o, zero_o)
 --!
---!             Latency: 5 clock cycles from data_valid_i to data_valid_o.
---!             The extra Stage 2 register breaks the critical path: it gives
---!             Vivado retiming candidates to absorb into DSP AREG/MREG, which
---!             is essential for timing closure at 200 MHz on Zynq-7010 (-1).
---!             For wide (42×43-bit) multiplications Vivado uses a multi-DSP
---!             cascade; without AREG+MREG the combinatorial cascade path
---!             exceeds 5 ns (200 MHz period). Synthesis requires -retiming.
+--!             data_valid_o follows data_valid_i through VALID_WIDTH clocks
+--!             (11 clocks with the current 7-cycle mult_gen IP plus local
+--!             pipeline registers). With data_valid_i tied high, the block
+--!             streams one transformed sample per clock after the pipeline fill.
 --!
 --! \author		Uriel Abe Contardi (urielcontardi@hotmail.com)
 --! \author		Vinícius de Carvalho Monteiro Longo (longo.vinicius@gmail.com)
@@ -73,7 +67,7 @@ Entity ClarkeTransform is
         sysclk          : in std_logic;
         reset_n         : in std_logic;
 
-        -- data_valid_o is asserted 5 clock cycles after data_valid_i
+        -- data_valid_o follows data_valid_i after VALID_WIDTH clock cycles
         data_valid_i    : in std_logic;
 
         --  ABC Input (two's complement, fixed point)
@@ -100,10 +94,12 @@ Architecture rtl of ClarkeTransform is
     -- AREG/BREG and MREG for timing closure at 200 MHz.
     attribute use_dsp : string;
 
-    -- Constants (calculated for fixed point representation)
-    constant COEFF_2_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(2.0/3.0 * real(2**FRAC_WIDTH)), DATA_WIDTH);  -- 2/3
-    constant COEFF_1_SQRT3 : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/1.732050808 * real(2**FRAC_WIDTH)), DATA_WIDTH); -- 1/√3
-    constant COEFF_1_3     : signed(DATA_WIDTH-1 downto 0) := to_signed(integer(1.0/3.0 * real(2**FRAC_WIDTH)), DATA_WIDTH);  -- 1/3
+    -- Constants (calculated for fixed point representation). The values are
+    -- positive and smaller than 1.0, so FRAC_WIDTH+1 bits are sufficient and
+    -- avoid unnecessarily wide 42x43 DSP cascades at 200 MHz.
+    constant COEFF_WIDTH   : integer := FRAC_WIDTH + 1;
+    constant COEFF_2_3     : signed(COEFF_WIDTH-1 downto 0) := to_signed(integer(2.0/3.0 * real(2**FRAC_WIDTH)), COEFF_WIDTH);  -- 2/3
+    constant COEFF_1_SQRT3 : signed(COEFF_WIDTH-1 downto 0) := to_signed(integer(1.0/1.732050808 * real(2**FRAC_WIDTH)), COEFF_WIDTH); -- 1/sqrt(3)
 
     -- Input Signals
     signal a : signed(DATA_WIDTH - 1 downto 0);
@@ -118,35 +114,57 @@ Architecture rtl of ClarkeTransform is
     -- Stage 1: pre-multiply sums
     signal alphaSum     : signed(DATA_WIDTH downto 0);   -- 1 extra bit for overflow
     signal betaSum      : signed(DATA_WIDTH downto 0);
-    signal zeroSum      : signed(DATA_WIDTH+1 downto 0); -- 2 extra bits for overflow
 
     -- Stage 2: re-registered sums (retimeable → absorbed into DSP AREG=1)
     signal alphaSum_r   : signed(DATA_WIDTH downto 0)   := (others => '0');
     signal betaSum_r    : signed(DATA_WIDTH downto 0)   := (others => '0');
-    signal zeroSum_r    : signed(DATA_WIDTH+1 downto 0) := (others => '0');
 
-    -- Stage 3: multiply (retimeable → absorbed into DSP MREG=1)
-    signal dsp_alpha_m  : signed(2*DATA_WIDTH downto 0);
-    signal dsp_beta_m   : signed(2*DATA_WIDTH downto 0);
-    signal dsp_zero_m   : signed(2*DATA_WIDTH+1 downto 0);
-    attribute use_dsp of dsp_alpha_m : signal is "yes";
-    attribute use_dsp of dsp_beta_m  : signal is "yes";
-    attribute use_dsp of dsp_zero_m  : signal is "yes";
+    constant PRODUCT_WIDTH : integer := DATA_WIDTH + 1 + COEFF_WIDTH;
+    constant MULT_LATENCY  : integer := 7;
+    constant VALID_WIDTH   : integer := MULT_LATENCY + 4;
 
-    -- Stage 4: P-register
-    signal alpha        : signed(2*DATA_WIDTH downto 0);
-    signal beta         : signed(2*DATA_WIDTH downto 0);
-    signal zero         : signed(2*DATA_WIDTH+1 downto 0);
+    component ClarkeMultiplier_DSP
+    port (
+        CLK : in  std_logic;
+        A   : in  std_logic_vector(DATA_WIDTH downto 0);
+        B   : in  std_logic_vector(COEFF_WIDTH-1 downto 0);
+        P   : out std_logic_vector(PRODUCT_WIDTH-1 downto 0)
+    );
+    end component;
 
-    -- Pipeline valid tracking (5 bits → 5-cycle latency)
-    --   bit 0: inputs registered        (Stage 0 → Stage 1)
-    --   bit 1: sums registered          (Stage 1 → Stage 2)
-    --   bit 2: sums re-registered       (Stage 2 → Stage 3)
-    --   bit 3: multiply registered      (Stage 3 → Stage 4)
-    --   bit 4: P-register registered    (Stage 4 → Stage 5 output)
-    signal validReg     : std_logic_vector(4 downto 0) := (others => '0');
+    -- Stage 3: pipeline DSP multipliers generated as mult_gen IP. This avoids
+    -- Vivado inferring an unregistered PCOUT->PCIN cascade for 43x29 constants.
+    signal alpha_prod_slv : std_logic_vector(PRODUCT_WIDTH-1 downto 0);
+    signal beta_prod_slv  : std_logic_vector(PRODUCT_WIDTH-1 downto 0);
+    signal alpha_prod     : signed(PRODUCT_WIDTH-1 downto 0);
+    signal beta_prod      : signed(PRODUCT_WIDTH-1 downto 0);
+
+    -- Stage 4: output register
+    signal alpha        : signed(PRODUCT_WIDTH-1 downto 0);
+    signal beta         : signed(PRODUCT_WIDTH-1 downto 0);
+
+    signal validReg     : std_logic_vector(VALID_WIDTH-1 downto 0) := (others => '0');
 
 Begin
+
+    alpha_prod <= signed(alpha_prod_slv);
+    beta_prod  <= signed(beta_prod_slv);
+
+    AlphaMultiplier : ClarkeMultiplier_DSP
+    port map (
+        CLK => sysclk,
+        A   => std_logic_vector(alphaSum_r),
+        B   => std_logic_vector(COEFF_2_3),
+        P   => alpha_prod_slv
+    );
+
+    BetaMultiplier : ClarkeMultiplier_DSP
+    port map (
+        CLK => sysclk,
+        A   => std_logic_vector(betaSum_r),
+        B   => std_logic_vector(COEFF_1_SQRT3),
+        P   => beta_prod_slv
+    );
 
     --------------------------------------------------------------------------
     -- Internal Signals
@@ -156,7 +174,7 @@ Begin
     c <= signed(c_in);
 
     --------------------------------------------------------------------------
-    -- Process: Clarke Transform  (6-stage pipeline, 5-cycle latency)
+    -- Process: Clarke Transform  (streaming DSP pipeline)
     --------------------------------------------------------------------------
     Process(sysclk, reset_n)
         variable b_half, c_half : signed(DATA_WIDTH-1 downto 0);
@@ -168,16 +186,10 @@ Begin
             c_reg        <= (others => '0');
             alphaSum     <= (others => '0');
             betaSum      <= (others => '0');
-            zeroSum      <= (others => '0');
             alphaSum_r   <= (others => '0');
             betaSum_r    <= (others => '0');
-            zeroSum_r    <= (others => '0');
-            dsp_alpha_m  <= (others => '0');
-            dsp_beta_m   <= (others => '0');
-            dsp_zero_m   <= (others => '0');
             alpha        <= (others => '0');
             beta         <= (others => '0');
-            zero         <= (others => '0');
             validReg     <= (others => '0');
             alpha_o      <= (others => '0');
             beta_o       <= (others => '0');
@@ -187,7 +199,7 @@ Begin
         elsif rising_edge(sysclk) then
 
             -- Pipeline valid tracking (shift register)
-            validReg <= validReg(3 downto 0) & data_valid_i;
+            validReg <= validReg(VALID_WIDTH-2 downto 0) & data_valid_i;
 
             -- Stage 0: register inputs
             a_reg <= a;
@@ -199,7 +211,6 @@ Begin
             c_half := shift_right(c_reg, 1);
             alphaSum <= resize(a_reg, DATA_WIDTH+1) - resize(b_half, DATA_WIDTH+1) - resize(c_half, DATA_WIDTH+1);
             betaSum  <= resize(b_reg, DATA_WIDTH+1) - resize(c_reg, DATA_WIDTH+1);
-            zeroSum  <= resize(a_reg, DATA_WIDTH+2) + resize(b_reg, DATA_WIDTH+2) + resize(c_reg, DATA_WIDTH+2);
 
             -- Stage 2: re-register sums
             -- These are pure register copies feeding the multiply.
@@ -208,24 +219,16 @@ Begin
             -- sum-register-to-DSP route delay from the critical path.
             alphaSum_r <= alphaSum;
             betaSum_r  <= betaSum;
-            zeroSum_r  <= zeroSum;
 
-            -- Stage 3: multiply (behavioral — Vivado infers multi-DSP cascade)
-            -- With retiming: alphaSum_r absorbed into DSP AREG, result into MREG.
-            dsp_alpha_m <= COEFF_2_3     * alphaSum_r;
-            dsp_beta_m  <= COEFF_1_SQRT3 * betaSum_r;
-            dsp_zero_m  <= COEFF_1_3     * zeroSum_r;
+            -- Stage 4: output register after pipelined multiplier IPs.
+            alpha <= alpha_prod;
+            beta  <= beta_prod;
 
-            -- Stage 4: P-register
-            alpha <= dsp_alpha_m;
-            beta  <= dsp_beta_m;
-            zero  <= dsp_zero_m;
-
-            -- Stage 5: extract output bits and output valid
+            -- Stage 5: extract output bits and delayed output valid
             alpha_o      <= alpha(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
             beta_o       <= beta(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
-            zero_o       <= zero(FRAC_WIDTH + DATA_WIDTH - 1 downto FRAC_WIDTH);
-            data_valid_o <= validReg(4);
+            zero_o       <= (others => '0');
+            data_valid_o <= validReg(VALID_WIDTH-1);
 
         End if;
     End process;
