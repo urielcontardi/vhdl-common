@@ -148,18 +148,25 @@ Begin
         end loop;
     end process;
 
-    -- Stage 1 second operand: X[Y[i]] for state rows, U[j] for input rows
+    -- Stage 1 second operand: X[Y[i]] for state rows, U[j] for input rows.
+    -- Y is not a Q14.28 value; the TIM solver stores only raw selectors:
+    --   MSB=1 -> disabled/linear term, low bits 0..4 -> X index.
+    -- Decode those legal values explicitly. This avoids a 42-bit signed
+    -- to_integer/index mux on the 200 MHz operand register path.
     YVec : process (Yvec_i, Xvec_i, Uvec_i)
-        variable index : integer range 0 to N_SS - 1;
     begin
         for aa in 0 to N_SS - 1 loop
-            -- Y[i] < 0 means no bilinear coupling: operand2 = 1 so product1 = X[i]
-            -- Guard against metavalue ('U'/'X') during initialization.
             if is_x(Yvec_i(aa)) or Yvec_i(aa)(FP_TOTAL_BITS - 1) = '1' then
                 operand2_vec(aa) <= FIXED_POINT_ONE;
             else
-                index := to_integer(signed(Yvec_i(aa)));
-                operand2_vec(aa) <= Xvec_i(index);
+                case Yvec_i(aa)(2 downto 0) is
+                    when "000" => operand2_vec(aa) <= Xvec_i(0);
+                    when "001" => operand2_vec(aa) <= Xvec_i(1);
+                    when "010" => operand2_vec(aa) <= Xvec_i(2);
+                    when "011" => operand2_vec(aa) <= Xvec_i(3);
+                    when "100" => operand2_vec(aa) <= Xvec_i(4);
+                    when others => operand2_vec(aa) <= FIXED_POINT_ONE;
+                end case;
             end if;
         end loop;
         for j in 0 to N_IN - 1 loop
