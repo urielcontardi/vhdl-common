@@ -99,15 +99,38 @@ Architecture rtl of BilinearSolverUnit is
     signal product1             : fixed_point_data_t;
     signal product2_raw         : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0);
 
-    -- Round-to-nearest: add 2^(FP_FRACTION_BITS-1) before truncating to Q14.28
+    -- Stage 1 multiplies state x state (both Q14.28) -> rescale by FP_FRACTION_BITS.
+    -- Built with shift_left rather than 2**n: the exponent can exceed the range
+    -- of VHDL's integer (2**31-1) once the coefficient format widens.
     constant ROUND_HALF_P1  : signed((2*FP_TOTAL_BITS)-1 downto 0) :=
-        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);
+        shift_left(to_signed(1, 2*FP_TOTAL_BITS), FP_FRACTION_BITS-1);
+    -- Stage 2 multiplies that Q14.28 result by a coefficient in Q(COEFF_INTEGER).
+    -- (COEFF_FRACTION), so the accumulator holds COEFF_FRACTION_BITS + 28
+    -- fractional bits and must be rescaled by COEFF_FRACTION_BITS -- not 28.
     constant ROUND_HALF_P2  : signed((2*FP_TOTAL_BITS)-1 downto 0) :=
-        to_signed(2**(FP_FRACTION_BITS-1), 2*FP_TOTAL_BITS);
+        shift_left(to_signed(1, 2*FP_TOTAL_BITS), COEFF_FRACTION_BITS-1);
 
     -- Accumulator
     signal acmtr                : std_logic_vector((2*FP_TOTAL_BITS)-1 downto 0) := (others => '0');
     signal stateResult_r       : fixed_point_data_t := (others => '0');
+
+    -- start_i registered: it arrives late (solver_start depends on
+    -- coeff_apply_pending) and driving an 84-bit mux from it costs ~0.8 ns of
+    -- setup slack on the 200 MHz solver clock.
+    signal start_pending        : std_logic := '0';
+    -- Truncation remainder carried into the next step. Bounded by one output
+    -- quantum, so COEFF_FRACTION_BITS+1 bits are enough -- keeping this narrow
+    -- is what makes the start-time seed mux cheap.
+    signal residual             : signed(COEFF_FRACTION_BITS downto 0) := (others => '0');
+
+    -- Error feedback: the truncation remainder is left in acmtr itself (see the
+    -- accumulator process). One step of the state increment is routinely smaller
+    -- than the Q14.28 output quantum -- with Ts = 130 ns the per-step change of a
+    -- state sits at the resolution floor, so plain truncation would emit the same
+    -- rounded-down value every step, a systematic bias that integrates directly
+    -- into the effective machine parameters. Carrying the remainder makes the sum
+    -- of the emitted increments track the exact sum, turning the bias into a
+    -- bounded, zero-mean ripple.
 
     --------------------------------------------------------------------------
     -- Component Declaration — Xilinx mult_gen IP (C_MULT_TYPE=1 → DSP48E1)
@@ -138,13 +161,13 @@ Begin
     --------------------------------------------------------------------------
 
     -- Stage 1 operands: X[i] (state) or B[j] (input coefficient)
-    Operand1Assign : process(Xvec_i, Bvec_i)
+    Operand1Assign : process(Xvec_i, Uvec_i)
     begin
         for i in 0 to N_SS - 1 loop
             operand1_vec(i) <= Xvec_i(i);
         end loop;
         for j in 0 to N_IN - 1 loop
-            operand1_vec(N_SS + j) <= Bvec_i(j);
+            operand1_vec(N_SS + j) <= Uvec_i(j);
         end loop;
     end process;
 
@@ -153,7 +176,7 @@ Begin
     --   MSB=1 -> disabled/linear term, low bits 0..4 -> X index.
     -- Decode those legal values explicitly. This avoids a 42-bit signed
     -- to_integer/index mux on the 200 MHz operand register path.
-    YVec : process (Yvec_i, Xvec_i, Uvec_i)
+    YVec : process (Yvec_i, Xvec_i)
     begin
         for aa in 0 to N_SS - 1 loop
             if is_x(Yvec_i(aa)) or Yvec_i(aa)(FP_TOTAL_BITS - 1) = '1' then
@@ -170,19 +193,23 @@ Begin
             end if;
         end loop;
         for j in 0 to N_IN - 1 loop
-            operand2_vec(N_SS + j) <= Uvec_i(j);
+            operand2_vec(N_SS + j) <= FIXED_POINT_ONE;
         end loop;
     end process;
 
     -- Stage 2 operands: A[i] for state rows (applied last, in 84-bit domain),
     -- FIXED_POINT_ONE for input rows (B*U already complete after stage 1).
-    Operand3Assign : process(Avec_i)
+    -- Stage 3 operand: the coefficient. A[i] for state rows, B[j] for input
+    -- rows. Both matrices enter here (and only here) so that a single rescale
+    -- by COEFF_FRACTION_BITS at the accumulator serves every coefficient --
+    -- stage 1 stays purely Q14.28 (state x state).
+    Operand3Assign : process(Avec_i, Bvec_i)
     begin
         for i in 0 to N_SS - 1 loop
             operand3_vec(i) <= Avec_i(i);
         end loop;
-        for i in N_SS to TOTAL_OPERATIONS - 1 loop
-            operand3_vec(i) <= FIXED_POINT_ONE;
+        for j in 0 to N_IN - 1 loop
+            operand3_vec(N_SS + j) <= Bvec_i(j);
         end loop;
     end process;
     
@@ -218,6 +245,7 @@ Begin
         variable pipeline2_tgr  : std_Logic := '0';
         variable sum_v          : signed((2*FP_TOTAL_BITS)-1 downto 0);
         variable rounded_v      : signed((2*FP_TOTAL_BITS)-1 downto 0);
+        variable result_v       : signed(FP_TOTAL_BITS-1 downto 0);
     begin
         if rising_edge(sysclk) then
             operand1 <= operand1_vec(index1);
@@ -263,18 +291,36 @@ Begin
             -- 3. Third stage: Accumulator
             --------------------------------------------------------------------------
             pipeline3_tgr <= pipeline2(pipeline2'left);
-            if start_i = '1' and busy = '0' then
-                acmtr <= (others => '0');
+            -- Flush any partial sum left by a solve that never reached its
+            -- latch. This unit has no reset port, so before the error-feedback
+            -- change the clear-on-start was the ONLY path that could empty the
+            -- accumulator -- and pwm_solver_reset_s is pulsed on every run and
+            -- stop, which can abort a solve mid-accumulation. Without this the
+            -- stale partial sum would corrupt every later step, permanently.
+            --
+            -- start_i is registered first: it arrives late (solver_start depends
+            -- on coeff_apply_pending) and an 84-bit mux on it costs ~0.8 ns of
+            -- setup slack. Clearing one cycle later is safe because the first
+            -- product2 lands only after the multiplier pipeline drains.
+            start_pending <= start_i and not busy;
+
+            if start_pending = '1' then
+                -- Seed from the residual register, not from acmtr: this both
+                -- carries the error feedback AND discards any partial sum left
+                -- behind by an aborted solve. residual is only 39 bits (it is
+                -- bounded by one output quantum), so the mux stays small.
+                acmtr <= std_logic_vector(resize(residual, 2*FP_TOTAL_BITS));
             elsif pipeline3_tgr = '1' then
                 sum_v := signed(acmtr) + signed(product2_raw);
                 acmtr <= std_logic_vector(sum_v);
-            end if;
-
-            -- Pipeline the accumulator-to-result rounding one cycle after a
-            -- valid accumulation, then hold the value until the next result.
-            if result_latch_pending = '1' then
+            elsif result_latch_pending = '1' then
+                -- One cycle past the last accumulation: emit and keep the rest.
                 rounded_v := signed(acmtr) + ROUND_HALF_P2;
-                stateResult_r <= std_logic_vector(rounded_v(FP_TOTAL_BITS + FP_FRACTION_BITS - 1 downto FP_FRACTION_BITS));
+                result_v  := rounded_v(FP_TOTAL_BITS + COEFF_FRACTION_BITS - 1 downto COEFF_FRACTION_BITS);
+                stateResult_r <= std_logic_vector(result_v);
+                residual <= resize(signed(acmtr)
+                            - shift_left(resize(result_v, 2*FP_TOTAL_BITS), COEFF_FRACTION_BITS),
+                            COEFF_FRACTION_BITS + 1);
             end if;
             result_latch_pending <= pipeline3_tgr;
 
